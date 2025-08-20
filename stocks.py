@@ -8,8 +8,7 @@ st.set_page_config(
 )
 
 # --- Page Title ---
-st.title("🛒 Stock")
-st.markdown("Add, view, and manage your stock items in real-time.")
+st.title("🛒 Stock Management")
 
 # --- Initialize Session State ---
 if 'stocks' not in st.session_state:
@@ -24,78 +23,58 @@ if 'stocks' not in st.session_state:
 def delete_stock(index_to_delete):
     st.session_state.stocks.pop(index_to_delete)
 
-# --- Add New Stock Section ---
-st.header("Add New Stock Item")
-
-with st.form("new_stock_form", clear_on_submit=True):
-    col1, col2 = st.columns([0.7, 0.3])
-    with col1:
+# --- Add New Stock Section (inside a popover) ---
+# The form is now hidden behind this button, keeping the UI clean.
+with st.popover("➕ Add New Item"):
+    st.markdown("#### Add a new item to your stock")
+    with st.form("new_stock_form"):
         new_stock_name = st.text_input("Stock Name", placeholder="e.g., Tomato")
-    with col2:
-        # Ask for the unit beforehand
-        new_stock_unit = st.radio("Unit", ["Numbers", "Kgs"], horizontal=True)
+        new_stock_unit = st.radio("Unit", ["Numbers", "Kgs"], horizontal=True, label_visibility="collapsed")
+        
+        submitted = st.form_submit_button("✔️ Add Stock")
 
-    submitted = st.form_submit_button("➕ Add Stock")
-
-    if submitted and new_stock_name:
-        if any(stock['name'].lower() == new_stock_name.lower() for stock in st.session_state.stocks):
-            st.warning(f"Stock '{new_stock_name}' already exists.")
-        else:
-            # Add the new stock with its specified unit
-            st.session_state.stocks.append({
-                "name": new_stock_name,
-                "unit": new_stock_unit,
-                "quantity": 0 # Default quantity is 0
-            })
-            st.success(f"Added '{new_stock_name}' to your stock list!")
+        if submitted and new_stock_name:
+            if any(stock['name'].lower() == new_stock_name.lower() for stock in st.session_state.stocks):
+                st.warning(f"Stock '{new_stock_name}' already exists.")
+            else:
+                st.session_state.stocks.append({
+                    "name": new_stock_name,
+                    "unit": new_stock_unit,
+                    "quantity": 0
+                })
+                # A success message is not needed here as the popover will close
+                # and the new item will appear in the list, providing visual feedback.
 
 st.markdown("---")
 
 # --- Display Current Stock List ---
-st.header("Current Stock")
+# Using a smaller header for a more compact look.
+st.subheader("Current Stock List")
 
 if not st.session_state.stocks:
-    st.info("Your stock list is empty. Add an item above to get started!")
+    st.info("Your stock list is empty. Add an item to get started!")
 else:
     for i in range(len(st.session_state.stocks)):
         stock = st.session_state.stocks[i]
         
-        # Create columns for layout: [Delete Icon, Name/Unit, Quantity Input]
         col1, col2, col3 = st.columns([0.15, 0.6, 0.25])
 
-        # Column 1: Delete Button
         with col1:
             st.button("🗑️", key=f"delete_{i}", on_click=delete_stock, args=(i,))
 
-        # Column 2: Stock Name and its unit
         with col2:
-            st.markdown(f"#### {stock['name']}")
+            st.markdown(f"**{stock['name']}**")
             st.caption(f"Unit: {stock['unit']}")
 
-        # Column 3: Quantity Input (handles int or float based on unit)
         with col3:
             if stock["unit"] == "Numbers":
-                # Input for Integers
                 quantity = st.number_input(
-                    "Quantity",
-                    min_value=0,
-                    step=1,
-                    value=int(stock["quantity"]),
-                    key=f"quantity_{i}",
-                    label_visibility="collapsed",
-                    format="%d" # Ensures input is treated as an integer
+                    "Quantity", min_value=0, step=1, value=int(stock["quantity"]),
+                    key=f"quantity_{i}", label_visibility="collapsed", format="%d"
                 )
             else: # For "Kgs"
-                # Input for Floats
                 quantity = st.number_input(
-                    "Quantity",
-                    min_value=0.0,
-                    step=0.1,
-                    value=float(stock["quantity"]),
-                    key=f"quantity_{i}",
-                    label_visibility="collapsed"
+                    "Quantity", min_value=0.0, step=0.1, value=float(stock["quantity"]),
+                    key=f"quantity_{i}", label_visibility="collapsed"
                 )
-            # Update the quantity in the session state
             st.session_state.stocks[i]['quantity'] = quantity
-            
-    st.markdown("---")
